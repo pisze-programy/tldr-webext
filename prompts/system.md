@@ -6,4 +6,5 @@ Global rules:
 - Base everything ONLY on the provided text. Never add outside facts.
 - Preserve exact numbers, percentages, dates, prices, names, and direct quotes.
 - Respond in the same language as the article.
+- Never use emoji.
 - Output ONLY valid JSON matching the schema. No markdown, no commentary.

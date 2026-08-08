@@ -10,43 +10,73 @@ const QRRender = (() => {
 
   function summary(data, meta) {
     const el = document.createElement("article");
-    el.className = "qr-digest";
+    el.className = "qr-summary";
 
     const head = document.createElement("header");
-    head.className = "qr-digest-head";
-
+    head.className = "qr-summary-head";
     const label = document.createElement("span");
-    label.className = "qr-digest-label";
+    label.className = "qr-summary-label";
     label.textContent = "Summary";
-
     const metaEl = document.createElement("span");
-    metaEl.className = "qr-digest-meta";
+    metaEl.className = "qr-summary-meta";
     metaEl.textContent = [meta.title, meta.byline, meta.published].filter(Boolean).join(" · ");
-
     head.append(label, metaEl);
 
     const tldr = document.createElement("p");
-    tldr.className = "qr-tldr";
+    tldr.className = "qr-summary-tldr";
     tldr.textContent = data.tldr || "";
 
-    const list = document.createElement("ul");
-    for (const b of data.bullets || []) {
-      const li = document.createElement("li");
-      li.textContent = b;
-      list.append(li);
+    const kw = document.createElement("div");
+    kw.className = "qr-summary-keywords";
+    for (const k of data.keywords || []) {
+      const s = document.createElement("span");
+      s.className = "qr-kw";
+      s.textContent = k;
+      kw.append(s);
     }
 
-    el.append(head, tldr, list);
+    const secs = document.createElement("div");
+    secs.className = "qr-summary-sections";
+    for (const s of data.sections || []) {
+      const sec = document.createElement("section");
+      sec.className = "qr-sec";
+      const h = document.createElement("h4");
+      h.textContent = s.heading || "";
+      sec.append(h);
+      const ul = document.createElement("ul");
+      for (const p of s.points || []) {
+        const li = document.createElement("li");
+        const txt = document.createElement("span");
+        txt.textContent = p.text || "";
+        li.append(txt);
+        if (p.anchor) {
+          const a = document.createElement("a");
+          a.className = "qr-jump";
+          a.href = "#";
+          a.textContent = "more ›";
+          a.dataset.anchor = p.anchor;
+          li.append(a);
+        }
+        ul.append(li);
+      }
+      sec.append(ul);
+      secs.append(sec);
+    }
+
+    el.append(head, tldr, kw, secs);
     return el;
   }
 
-  function fast(data, meta) {
+  function fastHtml(data, meta) {
+    const tw = meta.targetWords || 0;
+    const ow = meta.originalWords || 0;
+    const sec = meta.seconds || Math.round(tw / 250);
     const html = [];
     html.push(
       '<div class="qr-fast-head">' +
         '<span class="qr-fast-label">Fast digest</span>' +
         '<span class="qr-fast-meta">' +
-        esc(meta.targetWords) + " words · ~" + esc(meta.seconds) + " s read · original ~" + esc(meta.originalWords) + " words" +
+        esc(tw) + " words · ~" + esc(sec) + " s read · original ~" + esc(ow) + " words" +
         "</span>" +
         "</div>"
     );
@@ -63,5 +93,16 @@ const QRRender = (() => {
     return html.join("");
   }
 
-  return { summary, fast };
+  function fast(data, meta) {
+    return fastHtml(data, meta);
+  }
+
+  function fastBox(data, meta) {
+    const el = document.createElement("article");
+    el.className = "qr-fastbox";
+    el.innerHTML = fastHtml(data, meta);
+    return el;
+  }
+
+  return { summary, fast, fastBox };
 })();

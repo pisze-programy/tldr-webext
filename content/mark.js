@@ -7,48 +7,17 @@ const QRMark = (() => {
       .toLowerCase();
   }
 
-  function buildMap(s) {
-    const chars = [];
-    const map = [];
-    let inWs = true;
-    for (let i = 0; i < s.length; i++) {
-      const c = s[i];
-      if (/\s/.test(c)) {
-        if (!inWs) {
-          chars.push(" ");
-          map.push(i);
-          inWs = true;
-        }
-      } else {
-        chars.push(normalizeChar(c));
-        map.push(i);
-        inWs = false;
-      }
-    }
-    return { norm: chars.join(""), map };
+  function normalizeText(s) {
+    return normalizeChar(s).replace(/\s+/g, " ").trim();
   }
 
   function stripLeadingArticle(s) {
     return s.replace(/^(the|a|an)\s+/i, "").trim();
   }
 
-  function findRange(node, target) {
-    const t = normalizeChar(target).replace(/\s+/g, " ").trim();
-    if (!t) return null;
-    const { norm, map } = buildMap(node.data);
-    let idx = norm.indexOf(t);
-    if (idx === -1) {
-      const alt = stripLeadingArticle(t);
-      if (alt && alt !== t) idx = norm.indexOf(alt);
-      if (idx === -1) return null;
-      return { start: map[idx], end: map[idx + alt.length - 1] + 1 };
-    }
-    return { start: map[idx], end: map[idx + t.length - 1] + 1 };
-  }
-
-  function textNodes(container) {
+  function textNodes(scope) {
     const out = [];
-    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
       acceptNode: (n) => {
         const p = n.parentElement;
         if (p && (p.tagName === "SCRIPT" || p.tagName === "STYLE" || p.tagName === "MARK")) {
@@ -61,39 +30,131 @@ const QRMark = (() => {
     return out;
   }
 
-  function apply(container, phrases) {
-    const marks = [];
-    for (const phrase of phrases || []) {
-      const target = normalizeChar(phrase.text || "").replace(/\s+/g, " ").trim();
-      if (target.length < 2) continue;
-      const weight = phrase.weight === 3 ? 3 : phrase.weight === 2 ? 2 : 1;      for (const node of textNodes(container)) {
-        const r = findRange(node, target);
-        if (!r || r.start >= r.end) continue;
-        try {
-          const range = document.createRange();
-          range.setStart(node, r.start);
-          range.setEnd(node, r.end);
-          const mark = document.createElement("mark");
-          mark.className = "qr-w" + weight;
-          range.surroundContents(mark);
-          marks.push(mark);
-        } catch (e) {
+  function buildMap(scope) {
+    const chars = [];
+    const map = [];
+    let lastWasSpace = true;
+    for (const node of textNodes(scope)) {
+      const s = node.data;
+      for (let j = 0; j < s.length; j++) {
+        const c = s[j];
+        if (/\s/.test(c)) {
+          if (!lastWasSpace) {
+            chars.push(" ");
+            map.push({ node, offset: j });
+            lastWasSpace = true;
+          }
+        } else {
+          chars.push(normalizeChar(c));
+          map.push({ node, offset: j });
+          lastWasSpace = false;
         }
-        break;
       }
     }
-    return marks;
+    return { text: chars.join(""), map };
+  }
+
+  function match(map, target) {
+    let idx = map.text.indexOf(target);
+    let len = target.length;
+    if (idx === -1) {
+      const alt = stripLeadingArticle(target);
+      if (alt && alt !== target) {
+        idx = map.text.indexOf(alt);
+        len = alt.length;
+      }
+    }
+    if (idx === -1) return null;
+    return { start: idx, end: idx + len };
+  }
+
+  function rangeFor(map, start, end) {
+    const arr = map.map;
+    const s = arr[start];
+    const e = arr[end - 1];
+    const range = document.createRange();
+    range.setStart(s.node, s.offset);
+    range.setEnd(e.node, e.offset + 1);
+    return range;
+  }
+
+  function locate(scope, text) {
+    const target = normalizeText(text);
+    if (!target) return null;
+    const map = buildMap(scope);
+    const m = match(map, target);
+    if (!m) return null;
+    const arr = map.map;
+    const s = arr[m.start];
+    const e = arr[m.end - 1];
+    return { startNode: s.node, startOffset: s.offset, endNode: e.node, endOffset: e.offset + 1 };
+  }
+
+  function apply(scope, items) {
+    const map = buildMap(scope);
+    const marks = [];
+    const spans = [];
+    let misses = 0;
+
+    const prepared = [];
+    for (const it of items || []) {
+      const target = normalizeText(it.text || "");
+      if (target.length < 2) {
+        misses++;
+        continue;
+      }
+      const m = match(map, target);
+      if (!m) {
+        misses++;
+        continue;
+      }
+      prepared.push({ start: m.start, end: m.end, weight: it.weight === 3 ? 3 : it.weight === 2 ? 2 : 1 });
+    }
+    prepared.sort((a, b) => b.start - a.start);
+
+    for (const p of prepared) {
+      let clash = false;
+      for (const sp of spans) {
+        if (p.start < sp.end && p.end > sp.start) {
+          clash = true;
+          break;
+        }
+      }
+      if (clash) {
+        misses++;
+        continue;
+      }
+      const range = rangeFor(map, p.start, p.end);
+      const mark = document.createElement("mark");
+      mark.className = "qr-w" + p.weight;
+      try {
+        range.surroundContents(mark);
+        marks.push(mark);
+        spans.push({ start: p.start, end: p.end });
+      } catch (e) {
+        try {
+          const frag = range.extractContents();
+          mark.appendChild(frag);
+          range.insertNode(mark);
+          marks.push(mark);
+          spans.push({ start: p.start, end: p.end });
+        } catch (e2) {
+          misses++;
+        }
+      }
+    }
+    return { marks, misses };
   }
 
   function clear(marks) {
     for (const mark of marks) {
       if (mark && mark.isConnected) {
-        const parent = mark.parentNode;
+        const p = mark.parentNode;
         mark.replaceWith(...mark.childNodes);
-        if (parent) parent.normalize();
+        if (p) p.normalize();
       }
     }
   }
 
-  return { apply, clear };
+  return { apply, clear, locate };
 })();

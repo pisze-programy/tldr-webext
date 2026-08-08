@@ -2,7 +2,25 @@ function textOf(el) {
   return (el && el.textContent ? el.textContent : "").replace(/\s+/g, " ").trim();
 }
 
-function findContainer() {
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function wordSet(s) {
+  return new Set(s.split(/\s+/).filter((w) => w.length > 2));
+}
+
+function overlap(target, candidate) {
+  const t = wordSet(target);
+  if (!t.size) return 0;
+  const c = wordSet(candidate);
+  let hit = 0;
+  for (const w of t) if (c.has(w)) hit++;
+  return hit / t.size;
+}
+
+function candidateElements() {
+  const els = [];
   const selectors = [
     "article",
     "[role=main]",
@@ -16,7 +34,7 @@ function findContainer() {
   ];
   for (const sel of selectors) {
     const el = document.querySelector(sel);
-    if (el && textOf(el).length > 800) return el;
+    if (el) els.push(el);
   }
   let best = null;
   let bestLen = 0;
@@ -27,32 +45,64 @@ function findContainer() {
       best = el;
     }
   }
-  return best && bestLen > 800 ? best : null;
+  if (best) els.push(best);
+  return els;
 }
 
-function extractArticle() {
-  const container = findContainer();
-  if (!container) return null;
+function findContainer(parsed) {
+  const target = parsed.textContent;
+  let best = null;
+  let bestScore = 0;
+  for (const el of candidateElements()) {
+    if (textOf(el).length < CONFIG.MIN_ARTICLE_CHARS) continue;
+    const score = overlap(target, textOf(el));
+    if (score > bestScore) {
+      bestScore = score;
+      best = el;
+    }
+  }
+  return bestScore >= CONFIG.CONTAINER_OVERLAP ? best : null;
+}
 
-  let parsed = null;
+function tryParse() {
   try {
     const clone = document.cloneNode(true);
-    parsed = new Readability(clone).parse();
+    const parsed = new Readability(clone).parse();
+    if (parsed && parsed.textContent && parsed.textContent.length >= CONFIG.MIN_ARTICLE_CHARS) {
+      return parsed;
+    }
   } catch (e) {
-    parsed = null;
   }
-  if (!parsed || !parsed.textContent) return null;
+  return null;
+}
 
-  const published =
-    (document.querySelector('meta[property="article:published_time"]') || {}).content || "";
-  const byline =
-    (document.querySelector('meta[property="article:author"]') || {}).content || parsed.byline || "";
-
-  return {
-    title: parsed.title || document.title,
-    byline,
-    published,
-    text: parsed.textContent,
-    container
-  };
+async function extractArticle() {
+  for (const delay of CONFIG.EXTRACT_RETRY_MS) {
+    if (delay) await sleep(delay);
+    const parsed = tryParse();
+    if (parsed) {
+      const published =
+        (document.querySelector('meta[property="article:published_time"]') || {}).content || "";
+      const byline =
+        (document.querySelector('meta[property="article:author"]') || {}).content || parsed.byline || "";
+      return {
+        title: parsed.title || document.title,
+        byline,
+        published,
+        text: parsed.textContent,
+        container: findContainer(parsed)
+      };
+    }
+  }
+  const bodyText = textOf(document.body);
+  if (bodyText.length >= CONFIG.MIN_ARTICLE_CHARS) {
+    return {
+      title: document.title,
+      byline: "",
+      published: "",
+      text: bodyText.slice(0, CONFIG.MAX_CHARS),
+      container: null
+    };
+  }
+  return null;
 }

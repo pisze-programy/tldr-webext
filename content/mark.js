@@ -20,8 +20,20 @@ const QRMark = (() => {
     const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT, {
       acceptNode: (n) => {
         const p = n.parentElement;
-        if (p && (p.tagName === "SCRIPT" || p.tagName === "STYLE" || p.tagName === "MARK")) {
+        if (!p) return NodeFilter.FILTER_REJECT;
+        if (p.tagName === "SCRIPT" || p.tagName === "STYLE" || p.tagName === "MARK") {
           return NodeFilter.FILTER_REJECT;
+        }
+        if (p.closest("time") || p.closest("figcaption")) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        const h1 = p.closest("h1");
+        if (h1) {
+          const t = document.title.trim();
+          const h = h1.textContent.trim();
+          if (t && (t === h || t.startsWith(h))) {
+            return NodeFilter.FILTER_REJECT;
+          }
         }
         return NodeFilter.FILTER_ACCEPT;
       }
@@ -92,9 +104,10 @@ const QRMark = (() => {
 
   function apply(scope, items) {
     const map = buildMap(scope);
-    const marks = [];
+    const wrapped = [];
     const spans = [];
     let misses = 0;
+    let wrapWarned = false;
 
     const prepared = [];
     for (const it of items || []) {
@@ -108,7 +121,7 @@ const QRMark = (() => {
         misses++;
         continue;
       }
-      prepared.push({ start: m.start, end: m.end, weight: it.weight === 3 ? 3 : it.weight === 2 ? 2 : 1 });
+      prepared.push({ start: m.start, end: m.end, weight: Math.max(1, Math.min(6, it.weight | 0)) });
     }
     prepared.sort((a, b) => b.start - a.start);
 
@@ -129,21 +142,32 @@ const QRMark = (() => {
       mark.className = "qr-w" + p.weight;
       try {
         range.surroundContents(mark);
-        marks.push(mark);
+        wrapped.push({ mark, start: p.start });
         spans.push({ start: p.start, end: p.end });
       } catch (e) {
         try {
           const frag = range.extractContents();
           mark.appendChild(frag);
           range.insertNode(mark);
-          marks.push(mark);
+          wrapped.push({ mark, start: p.start });
           spans.push({ start: p.start, end: p.end });
         } catch (e2) {
+          if (!wrapWarned) {
+            wrapWarned = true;
+            console.warn("[qr] mark wrap failed:", e2);
+          }
           misses++;
         }
       }
     }
-    return { marks, misses };
+
+    wrapped.sort((a, b) => a.start - b.start);
+    wrapped.forEach((w, i) => {
+      w.mark.style.animationDelay = i * CONFIG.MARK_STAGGER_MS + "ms";
+      w.mark.classList.add("qr-reveal");
+    });
+
+    return { marks: wrapped.map((w) => w.mark), misses };
   }
 
   function clear(marks) {

@@ -64,6 +64,8 @@ function findContainer(parsed) {
   return bestScore >= CONFIG.CONTAINER_OVERLAP ? best : null;
 }
 
+let readabilityWarned = false;
+
 function tryParse() {
   try {
     const clone = document.cloneNode(true);
@@ -72,6 +74,10 @@ function tryParse() {
       return parsed;
     }
   } catch (e) {
+    if (!readabilityWarned) {
+      readabilityWarned = true;
+      console.warn("[qr] Readability failed:", e);
+    }
   }
   return null;
 }

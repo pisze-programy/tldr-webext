@@ -3,8 +3,11 @@ const CONFIG = {
   MODEL: "deepseek-v4-flash",
   MAX_CHARS: 24000,
   TEMPERATURE: { summary: 0.2, relaxed: 0.0, fast: 0.2 },
-  MAX_TOKENS: { summary: 2048, relaxed: 4096, fast: 4096 },
-  MAX_TOKENS_RETRY: 8192,
+  MAX_TOKENS: { summary: 1024, relaxed: 2048, fast: 2048 },
+  MAX_TOKENS_RETRY: 4096,
+  API_TIMEOUT_MS: 45000,
+  THINKING_DISABLE: true,
+  DEBUG: true,
   COST_PER_M_INPUT: 0.14,
   COST_PER_M_OUTPUT: 0.28,
   EXTRACT_RETRY_MS: [0, 600, 1600, 3200],
@@ -14,7 +17,8 @@ const CONFIG = {
   FAST_WORD_RATIO: 0.18,
   FAST_WORD_MIN: 90,
   FAST_WORD_MAX: 550,
-  PHRASE_PER_WORDS: 100,
-  PHRASE_MIN: 6,
-  PHRASE_MAX: 20
+  PHRASE_PER_WORDS: 40,
+  PHRASE_MIN: 12,
+  PHRASE_MAX: 40,
+  MARK_STAGGER_MS: 60
 };

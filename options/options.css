@@ -27,13 +27,15 @@ label {
   margin: 18px 0 6px;
 }
 
-input {
+input,
+select {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 10px;
   font-size: 14px;
   border: 1px solid rgba(0, 0, 0, 0.2);
   border-radius: 8px;
+  background: #fff;
 }
 
 button {

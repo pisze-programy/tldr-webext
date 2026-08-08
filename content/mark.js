@@ -1,3 +1,15 @@
+const PALETTES = {
+  orange: [255, 140, 0],
+  yellow: [255, 213, 79],
+  green: [76, 175, 80],
+  blue: [66, 133, 244],
+  purple: [156, 93, 229],
+  gray: [128, 128, 128]
+};
+
+const NORMAL_ALPHA = [0.18, 0.3, 0.42, 0.55, 0.68, 0.82];
+const LIGHT_ALPHA = [0.1, 0.17, 0.25, 0.34, 0.44, 0.55];
+
 const QRMark = (() => {
   function normalizeChar(c) {
     return c
@@ -102,8 +114,12 @@ const QRMark = (() => {
     return { startNode: s.node, startOffset: s.offset, endNode: e.node, endOffset: e.offset + 1 };
   }
 
-  function apply(scope, items) {
+  function apply(scope, items, opts) {
     const map = buildMap(scope);
+    const color = PALETTES[(opts && opts.color) || "orange"] || PALETTES.orange;
+    const direction = (opts && opts.direction) || "strong";
+    const ramp = (opts && opts.intensity) === "light" ? LIGHT_ALPHA : NORMAL_ALPHA;
+    const style = (opts && opts.style) || "marker";
     const wrapped = [];
     const spans = [];
     let misses = 0;
@@ -140,6 +156,29 @@ const QRMark = (() => {
       const range = rangeFor(map, p.start, p.end);
       const mark = document.createElement("mark");
       mark.className = "qr-w" + p.weight;
+      const idx = Math.max(0, Math.min(5, direction === "inverse" ? 6 - p.weight : p.weight - 1));
+      const bg = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + ramp[idx] + ")";
+      if (style === "underline") {
+        const ua = 0.45 + ramp[idx] * 0.5;
+        const ubg = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + ua + ")";
+        mark.style.background = "transparent";
+        mark.style.backgroundImage = "linear-gradient(90deg," + ubg + "," + ubg + ")";
+        mark.style.backgroundRepeat = "no-repeat";
+        mark.style.backgroundPosition = "0 100%";
+        mark.style.backgroundSize = "0% 2px";
+        mark.classList.add("qr-style-underline");
+      } else if (style === "sweep") {
+        mark.style.backgroundImage = "linear-gradient(90deg," + bg + "," + bg + ")";
+        mark.style.backgroundRepeat = "no-repeat";
+        mark.style.backgroundSize = "0% 100%";
+        mark.classList.add("qr-style-sweep");
+      } else {
+        mark.style.background = bg;
+        if ((direction === "strong" && p.weight === 6) || (direction === "inverse" && p.weight === 1)) {
+          mark.style.boxShadow = "0 0 0 1px rgba(" + color[0] + "," + color[1] + "," + color[2] + ",0.4)";
+        }
+        mark.classList.add("qr-reveal");
+      }
       try {
         range.surroundContents(mark);
         wrapped.push({ mark, start: p.start });
@@ -164,7 +203,6 @@ const QRMark = (() => {
     wrapped.sort((a, b) => a.start - b.start);
     wrapped.forEach((w, i) => {
       w.mark.style.animationDelay = i * CONFIG.MARK_STAGGER_MS + "ms";
-      w.mark.classList.add("qr-reveal");
     });
 
     return { marks: wrapped.map((w) => w.mark), misses };

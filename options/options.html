@@ -16,7 +16,30 @@
     <button id="save" type="button">Save</button>
     <p id="status" class="status"></p>
 
-    <label for="markDirection">Relaxed marker shading</label>
+    <label for="markStyle">Marker style</label>
+    <select id="markStyle">
+      <option value="marker">Background marker</option>
+      <option value="sweep">Sweep (left to right)</option>
+      <option value="underline">Underline</option>
+    </select>
+
+    <label for="markColor">Relaxed marker color</label>
+    <select id="markColor">
+      <option value="orange">Orange</option>
+      <option value="yellow">Light yellow</option>
+      <option value="green">Green</option>
+      <option value="blue">Blue</option>
+      <option value="purple">Purple</option>
+      <option value="gray">Gray</option>
+    </select>
+
+    <label for="markIntensity">Marker intensity</label>
+    <select id="markIntensity">
+      <option value="normal">Normal</option>
+      <option value="light">Light</option>
+    </select>
+
+    <label for="markDirection">Shading direction</label>
     <select id="markDirection">
       <option value="strong">Higher weight = stronger</option>
       <option value="inverse">Higher weight = lighter</option>

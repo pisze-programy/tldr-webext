@@ -65,7 +65,7 @@
     }
   }
 
-  function apply(mode, data, article, targetWords, markDirection) {
+  function apply(mode, data, article, targetWords, markOpts) {
     state.active = mode;
     if (mode === "summary") {
       const el = QRRender.summary(data, article);
@@ -73,9 +73,7 @@
       state.extra = [el];
     } else if (mode === "relaxed") {
       const scope = article.container || document.body;
-      scope.classList.remove("qr-mark-strong", "qr-mark-inverse");
-      scope.classList.add(markDirection === "inverse" ? "qr-mark-inverse" : "qr-mark-strong");
-      const result = QRMark.apply(scope, data.phrases || []);
+      const result = QRMark.apply(scope, data.phrases || [], markOpts);
       state.marks = result.marks;
       const total = (data.phrases || []).length;
       browser.runtime
@@ -166,8 +164,8 @@
       }
       const t2 = Date.now();
       phase = "apply";
-      const { markDirection } = await browser.storage.local.get("markDirection");
-      apply(mode, res.data, article, res.targetWords, markDirection);
+      const markOpts = await browser.storage.local.get(["markStyle", "markColor", "markIntensity", "markDirection"]);
+      apply(mode, res.data, article, res.targetWords, markOpts);
       log("apply +" + (Date.now() - t2) + "ms mode=" + mode);
     } catch (e) {
       console.error("[qr] fail mode=" + mode + " phase=" + phase + ":", e);

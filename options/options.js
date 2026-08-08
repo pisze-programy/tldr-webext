@@ -2,7 +2,12 @@ const input = document.getElementById("apiKey");
 const status = document.getElementById("status");
 const tbody = document.querySelector("#usageTable tbody");
 const totalsEl = document.getElementById("totals");
-const dirSelect = document.getElementById("markDirection");
+const markSelects = {
+  markStyle: document.getElementById("markStyle"),
+  markColor: document.getElementById("markColor"),
+  markIntensity: document.getElementById("markIntensity"),
+  markDirection: document.getElementById("markDirection")
+};
 
 document.getElementById("modelHint").textContent =
   "Model: " + CONFIG.MODEL + " · " + CONFIG.COST_PER_M_INPUT + "$/1M input · " + CONFIG.COST_PER_M_OUTPUT + "$/1M output";
@@ -28,9 +33,11 @@ function flash(msg) {
 
 async function load() {
   try {
-    const data = await browser.storage.local.get(["apiKey", "markDirection"]);
+    const data = await browser.storage.local.get(["apiKey", "markStyle", "markColor", "markIntensity", "markDirection"]);
     if (data.apiKey) input.value = data.apiKey;
-    if (data.markDirection) dirSelect.value = data.markDirection;
+    for (const key of Object.keys(markSelects)) {
+      if (data[key]) markSelects[key].value = data[key];
+    }
   } catch (e) {
     console.error("[qr] options load:", e);
     flash("Failed to load settings.");
@@ -47,14 +54,16 @@ document.getElementById("save").addEventListener("click", async () => {
   }
 });
 
-dirSelect.addEventListener("change", async () => {
-  try {
-    await browser.storage.local.set({ markDirection: dirSelect.value });
-    flash("Saved.");
-  } catch (e) {
-    console.error("[qr] options markDirection:", e);
-  }
-});
+for (const key of Object.keys(markSelects)) {
+  markSelects[key].addEventListener("change", async () => {
+    try {
+      await browser.storage.local.set({ [key]: markSelects[key].value });
+      flash("Saved.");
+    } catch (e) {
+      console.error("[qr] options " + key + ":", e);
+    }
+  });
+}
 
 async function renderUsage() {
   try {

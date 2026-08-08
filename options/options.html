@@ -16,34 +16,33 @@
     <button id="save" type="button">Save</button>
     <p id="status" class="status"></p>
 
-    <label for="markStyle">Marker style</label>
-    <select id="markStyle">
-      <option value="marker">Background marker</option>
-      <option value="sweep">Sweep (left to right)</option>
-      <option value="underline">Underline</option>
-    </select>
+    <h2>Relaxed markers</h2>
+    <div class="marker-group">
+      <label for="paletteToggle">Palette</label>
+      <div class="palette-picker">
+        <button type="button" id="paletteToggle" class="palette-toggle">
+          <span class="swatch" id="paletteCurrentChip"></span>
+          <span id="paletteCurrentName">Orange</span>
+          <span class="caret">&#9662;</span>
+        </button>
+        <div class="palette-menu" id="paletteMenu" hidden>
+          <div class="palette-grid" id="paletteGrid"></div>
+        </div>
+      </div>
 
-    <label for="markColor">Relaxed marker color</label>
-    <select id="markColor">
-      <option value="orange">Orange</option>
-      <option value="yellow">Light yellow</option>
-      <option value="green">Green</option>
-      <option value="blue">Blue</option>
-      <option value="purple">Purple</option>
-      <option value="gray">Gray</option>
-    </select>
+      <label for="markStyle">Marker style</label>
+      <select id="markStyle">
+        <option value="marker">Background marker</option>
+        <option value="sweep">Sweep (left to right)</option>
+        <option value="underline">Underline</option>
+      </select>
 
-    <label for="markIntensity">Marker intensity</label>
-    <select id="markIntensity">
-      <option value="normal">Normal</option>
-      <option value="light">Light</option>
-    </select>
-
-    <label for="markDirection">Shading direction</label>
-    <select id="markDirection">
-      <option value="strong">Higher weight = stronger</option>
-      <option value="inverse">Higher weight = lighter</option>
-    </select>
+      <label for="markDirection">Shading direction</label>
+      <select id="markDirection">
+        <option value="strong">Higher weight = stronger</option>
+        <option value="inverse">Higher weight = lighter</option>
+      </select>
+    </div>
 
     <h2>Usage</h2>
     <p id="totals" class="totals"></p>

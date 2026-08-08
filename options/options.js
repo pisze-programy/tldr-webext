@@ -2,11 +2,26 @@ const input = document.getElementById("apiKey");
 const status = document.getElementById("status");
 const tbody = document.querySelector("#usageTable tbody");
 const totalsEl = document.getElementById("totals");
+
+const paletteToggle = document.getElementById("paletteToggle");
+const paletteMenu = document.getElementById("paletteMenu");
+const paletteGrid = document.getElementById("paletteGrid");
+const paletteCurrentChip = document.getElementById("paletteCurrentChip");
+const paletteCurrentName = document.getElementById("paletteCurrentName");
+
 const markSelects = {
   markStyle: document.getElementById("markStyle"),
-  markColor: document.getElementById("markColor"),
-  markIntensity: document.getElementById("markIntensity"),
   markDirection: document.getElementById("markDirection")
+};
+
+const PALETTE_ORDER = ["orange", "yellow", "green", "blue", "purple", "gray"];
+const PALETTE_NAMES = {
+  orange: "Orange",
+  yellow: "Yellow",
+  green: "Green",
+  blue: "Blue",
+  purple: "Purple",
+  gray: "Gray"
 };
 
 document.getElementById("modelHint").textContent =
@@ -31,10 +46,74 @@ function flash(msg) {
   }, 2500);
 }
 
+function chipBg(color, intensity) {
+  const a = intensity === "light" ? 0.35 : 0.75;
+  return "rgba(" + CONFIG.PALETTES[color].join(",") + "," + a + ")";
+}
+
+function labelFor(color, intensity) {
+  return PALETTE_NAMES[color] + (intensity === "light" ? " · light" : "");
+}
+
+function reflectCurrent(color, intensity) {
+  paletteCurrentChip.style.background = chipBg(color, intensity);
+  paletteCurrentName.textContent = labelFor(color, intensity);
+  for (const b of paletteGrid.querySelectorAll(".palette-chip")) {
+    b.classList.toggle("selected", b.dataset.color === color && b.dataset.intensity === intensity);
+  }
+}
+
+function buildPalette() {
+  for (const color of PALETTE_ORDER) {
+    for (const intensity of ["normal", "light"]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "palette-chip";
+      b.dataset.color = color;
+      b.dataset.intensity = intensity;
+      b.title = labelFor(color, intensity);
+      const sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = chipBg(color, intensity);
+      const lb = document.createElement("span");
+      lb.className = "chip-label";
+      lb.textContent = labelFor(color, intensity);
+      b.append(sw, lb);
+      b.addEventListener("click", async () => {
+        try {
+          await browser.storage.local.set({ markColor: color, markIntensity: intensity });
+          reflectCurrent(color, intensity);
+          paletteMenu.hidden = true;
+          flash("Saved.");
+        } catch (e) {
+          console.error("[qr] options palette:", e);
+        }
+      });
+      paletteGrid.appendChild(b);
+    }
+  }
+}
+
+paletteToggle.addEventListener("click", (e) => {
+  e.stopPropagation();
+  paletteMenu.hidden = !paletteMenu.hidden;
+});
+
+document.addEventListener("click", (e) => {
+  if (!paletteMenu.hidden && e.target !== paletteToggle && !paletteMenu.contains(e.target)) {
+    paletteMenu.hidden = true;
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") paletteMenu.hidden = true;
+});
+
 async function load() {
   try {
-    const data = await browser.storage.local.get(["apiKey", "markStyle", "markColor", "markIntensity", "markDirection"]);
+    const data = await browser.storage.local.get(["apiKey", "markColor", "markIntensity", "markStyle", "markDirection"]);
     if (data.apiKey) input.value = data.apiKey;
+    reflectCurrent(data.markColor || "orange", data.markIntensity || "normal");
     for (const key of Object.keys(markSelects)) {
       if (data[key]) markSelects[key].value = data[key];
     }
@@ -103,5 +182,6 @@ document.getElementById("clearUsage").addEventListener("click", async () => {
   flash("Usage log cleared.");
 });
 
+buildPalette();
 load();
 renderUsage();

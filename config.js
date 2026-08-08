@@ -20,5 +20,17 @@ const CONFIG = {
   PHRASE_PER_WORDS: 40,
   PHRASE_MIN: 12,
   PHRASE_MAX: 40,
-  MARK_STAGGER_MS: 60
+  MARK_STAGGER_MS: 60,
+  PALETTES: {
+    orange: [255, 140, 0],
+    yellow: [255, 213, 79],
+    green: [76, 175, 80],
+    blue: [66, 133, 244],
+    purple: [156, 93, 229],
+    gray: [128, 128, 128]
+  },
+  MARK_ALPHA: {
+    normal: [0.18, 0.3, 0.42, 0.55, 0.68, 0.82],
+    light: [0.1, 0.17, 0.25, 0.34, 0.44, 0.55]
+  }
 };

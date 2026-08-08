@@ -1,15 +1,3 @@
-const PALETTES = {
-  orange: [255, 140, 0],
-  yellow: [255, 213, 79],
-  green: [76, 175, 80],
-  blue: [66, 133, 244],
-  purple: [156, 93, 229],
-  gray: [128, 128, 128]
-};
-
-const NORMAL_ALPHA = [0.18, 0.3, 0.42, 0.55, 0.68, 0.82];
-const LIGHT_ALPHA = [0.1, 0.17, 0.25, 0.34, 0.44, 0.55];
-
 const QRMark = (() => {
   function normalizeChar(c) {
     return c
@@ -116,9 +104,9 @@ const QRMark = (() => {
 
   function apply(scope, items, opts) {
     const map = buildMap(scope);
-    const color = PALETTES[(opts && opts.color) || "orange"] || PALETTES.orange;
+    const color = CONFIG.PALETTES[(opts && opts.color) || "orange"] || CONFIG.PALETTES.orange;
     const direction = (opts && opts.direction) || "strong";
-    const ramp = (opts && opts.intensity) === "light" ? LIGHT_ALPHA : NORMAL_ALPHA;
+    const ramp = (opts && opts.intensity) === "light" ? CONFIG.MARK_ALPHA.light : CONFIG.MARK_ALPHA.normal;
     const style = (opts && opts.style) || "marker";
     const wrapped = [];
     const spans = [];

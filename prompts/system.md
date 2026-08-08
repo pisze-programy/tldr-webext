@@ -7,4 +7,5 @@ Global rules:
 - Preserve exact numbers, percentages, dates, prices, names, and direct quotes.
 - Respond in the same language as the article.
 - Never use emoji.
+- Respond with the JSON immediately. Do not write any reasoning or chain-of-thought.
 - Output ONLY valid JSON matching the schema. No markdown, no commentary.

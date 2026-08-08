@@ -6,7 +6,7 @@
   "permissions": ["contextMenus", "storage"],
   "host_permissions": ["https://api.deepseek.com/*"],
   "background": {
-    "scripts": ["config.js", "background.js"]
+    "scripts": ["config.js", "usage.js", "background.js"]
   },
   "content_scripts": [
     {

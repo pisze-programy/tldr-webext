@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 150">
+  <rect x="8" y="8" width="304" height="134" rx="12" fill="#ffffff" stroke="#e3e3e3"/>
+  <g>
+    <rect x="16" y="58" width="130" height="9" rx="4" fill="#333333"/>
+    <rect x="16" y="78" width="230" height="6" rx="3" fill="#d8d8d8"/>
+    <rect x="16" y="94" width="170" height="6" rx="3" fill="#d8d8d8"/>
+    <rect x="16" y="110" width="205" height="6" rx="3" fill="#d8d8d8"/>
+  </g>
+  <g>
+    <animateTransform attributeName="transform" type="translate" values="-14 0;0 0" begin="0.4s;4.4s" dur="0.5s" fill="freeze"/>
+    <animate attributeName="opacity" values="0;1" begin="0.4s;4.4s" dur="0.5s" fill="freeze"/>
+    <rect x="16" y="14" width="182" height="36" rx="9" fill="#eef3ff" stroke="#c6d6f2"/>
+    <text x="26" y="37" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#1f3a8a">TL;DR — summary</text>
+  </g>
+  <rect x="20" y="94" width="150" height="6" rx="3" fill="#ffe08a">
+    <animate attributeName="opacity" values="0;1;0" keyTimes="0;0.5;1" begin="2.4s;6.4s" dur="1s" fill="freeze"/>
+  </rect>
+</svg>

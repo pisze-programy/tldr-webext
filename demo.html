@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>TLDR; — live demo</title>
+    <style>
+      body {
+        font-family: Georgia, serif;
+        max-width: 720px;
+        margin: 40px auto;
+        padding: 0 20px;
+        color: #1f1f1f;
+        line-height: 1.6;
+      }
+
+      #controls {
+        font-family: system-ui, sans-serif;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        background: #f5f5f7;
+        border: 1px solid #e3e3e3;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 24px;
+      }
+
+      #controls label {
+        font-size: 12px;
+        color: #666;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      select,
+      button {
+        font-size: 13px;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background: #fff;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      .post-content p {
+        margin-bottom: 18px;
+      }
+
+      mark {
+        color: inherit;
+        padding: 1px 2px;
+        border-radius: 4px;
+      }
+
+      mark.qr-reveal {
+        animation: qr-reveal 0.45s ease both;
+      }
+
+      @keyframes qr-reveal {
+        from {
+          opacity: 0;
+          background: transparent;
+        }
+      }
+
+      mark.qr-style-sweep {
+        animation: qr-sweep 0.6s ease forwards;
+      }
+
+      @keyframes qr-sweep {
+        to {
+          background-size: 100% 100%;
+        }
+      }
+
+      mark.qr-style-underline {
+        animation: qr-underline 0.6s ease forwards;
+      }
+
+      @keyframes qr-underline {
+        to {
+          background-size: 100% 2px;
+        }
+      }
+
+      .qr-summary {
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 18px;
+        padding: 22px 24px;
+        margin-bottom: 28px;
+        font-family: system-ui, sans-serif;
+      }
+
+      .qr-summary .tldr {
+        font-size: 18px;
+        font-weight: 500;
+        margin: 0 0 10px;
+      }
+
+      .qr-summary .kw {
+        display: inline-block;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 999px;
+        padding: 3px 12px;
+        font-size: 12.5px;
+        color: rgba(0, 0, 0, 0.7);
+        margin: 0 6px 6px 0;
+      }
+
+      .qr-summary .sec {
+        border-top: 1px solid rgba(0, 0, 0, 0.07);
+        padding-top: 12px;
+        margin-top: 14px;
+      }
+
+      .qr-summary .sec h4 {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(0, 0, 0, 0.5);
+        margin: 0 0 6px;
+      }
+
+      .qr-summary .sec ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .qr-summary .sec li {
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      .qr-fast {
+        background: #fff;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 18px;
+        padding: 22px 24px;
+        font-family: system-ui, sans-serif;
+      }
+
+      .qr-fast h2 {
+        font-size: 19px;
+        margin: 20px 0 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <label>Color
+        <select id="color">
+          <option value="orange">Orange</option>
+          <option value="yellow">Light yellow</option>
+          <option value="green">Green</option>
+          <option value="blue">Blue</option>
+          <option value="purple">Purple</option>
+          <option value="gray">Gray</option>
+        </select>
+      </label>
+      <label>Intensity
+        <select id="intensity">
+          <option value="normal">Normal</option>
+          <option value="light">Light</option>
+        </select>
+      </label>
+      <label>Direction
+        <select id="direction">
+          <option value="strong">Higher weight = stronger</option>
+          <option value="inverse">Higher weight = lighter</option>
+        </select>
+      </label>
+      <label>Style
+        <select id="style">
+          <option value="marker">Background marker</option>
+          <option value="sweep">Sweep</option>
+          <option value="underline">Underline</option>
+        </select>
+      </label>
+      <button id="btnRelaxed" type="button">Relaxed</button>
+      <button id="btnSummary" type="button">Summary</button>
+      <button id="btnFast" type="button">Fast</button>
+      <button id="btnReset" type="button">Reset</button>
+    </div>
+
+    <article id="article" class="post-content">
+      <h1>How Personalized Software Changes Everything</h1>
+      <p><mark data-w="6">personalize software by editing its source directly</mark> instead of configuring it. The old plugin systems and config files exist to spread the cost of a change across many users. When an AI agent can edit the source itself, that cost collapses.</p>
+      <p>For <mark data-w="3">single-user software</mark>, a top-end agent can usually add a feature <mark data-w="5">in a single shot</mark>. Careful code review can often be replaced by "does it seem to work?"</p>
+      <p>The catch is that the software must be open source. <mark data-w="6">All you need is the source code</mark>. Closed-source tools like Claude Code can't be personalized this way.</p>
+      <p>This applies to small teams too. Instead of configuring a heavy task manager, a team can <mark data-w="4">assemble the features it wants from building blocks</mark>, and keep going because the agent also <mark data-w="2">rebases local changes on upstream</mark> every night.</p>
+    </article>
+
+    <script>
+      const article = document.getElementById("article");
+      const origHTML = article.innerHTML;
+
+      const PALETTES = {
+        orange: [255, 140, 0],
+        yellow: [255, 213, 79],
+        green: [76, 175, 80],
+        blue: [66, 133, 244],
+        purple: [156, 93, 229],
+        gray: [128, 128, 128]
+      };
+      const NORMAL = [0.18, 0.3, 0.42, 0.55, 0.68, 0.82];
+      const LIGHT = [0.1, 0.17, 0.25, 0.34, 0.44, 0.55];
+
+      const $ = (id) => document.getElementById(id);
+
+      function applyRelaxed() {
+        const color = PALETTES[$("color").value];
+        const direction = $("direction").value;
+        const ramp = $("intensity").value === "light" ? LIGHT : NORMAL;
+        const style = $("style").value;
+        const marks = [...article.querySelectorAll("mark[data-w]")];
+        marks.forEach((m, i) => {
+          const w = Math.max(1, Math.min(6, parseInt(m.dataset.w, 10) || 1));
+          const idx = Math.max(0, Math.min(5, direction === "inverse" ? 6 - w : w - 1));
+          const bg = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + ramp[idx] + ")";
+          m.classList.remove("qr-reveal", "qr-style-sweep", "qr-style-underline");
+          m.style.cssText = "";
+          m.style.animationDelay = i * 60 + "ms";
+          if (style === "underline") {
+            const ua = 0.45 + ramp[idx] * 0.5;
+            const ubg = "rgba(" + color[0] + "," + color[1] + "," + color[2] + "," + ua + ")";
+            m.style.background = "transparent";
+            m.style.backgroundImage = "linear-gradient(90deg," + ubg + "," + ubg + ")";
+            m.style.backgroundRepeat = "no-repeat";
+            m.style.backgroundPosition = "0 100%";
+            m.style.backgroundSize = "0% 2px";
+            m.classList.add("qr-style-underline");
+          } else if (style === "sweep") {
+            m.style.backgroundImage = "linear-gradient(90deg," + bg + "," + bg + ")";
+            m.style.backgroundRepeat = "no-repeat";
+            m.style.backgroundSize = "0% 100%";
+            m.classList.add("qr-style-sweep");
+          } else {
+            m.style.background = bg;
+            m.classList.add("qr-reveal");
+          }
+        });
+      }
+
+      function applySummary() {
+        if (!document.querySelector(".qr-summary")) {
+          const card = document.createElement("div");
+          card.className = "qr-summary";
+          card.innerHTML =
+            '<p class="tldr">The age of personalized software: an AI agent edits the source directly, so plugin systems and config files are no longer needed.</p>' +
+            '<span class="kw">open source</span><span class="kw">agent</span><span class="kw">source code</span>' +
+            '<div class="sec"><h4>The recipe</h4><ul><li>Two prompts to an agent are enough to start.</li></ul></div>' +
+            '<div class="sec"><h4>The limit</h4><ul><li>Closed-source agents cannot be personalized.</li></ul></div>';
+          article.prepend(card);
+        }
+      }
+
+      function applyFast() {
+        if (!document.querySelector(".qr-fast")) {
+          const fast = document.createElement("div");
+          fast.className = "qr-fast";
+          fast.innerHTML =
+            "<p><strong>TL;DR</strong> — Agents edit source directly; plugins and configs are obsolete.</p>" +
+            "<h2>Why it matters</h2><ul><li>One agent call adds a feature in a single shot.</li><li>Open source is the only requirement.</li></ul>" +
+            "<h2>The limit</h2><ul><li>Closed-source tools can't be personalized.</li></ul>";
+          article.querySelector("h1").insertAdjacentElement("afterend", fast);
+        }
+      }
+
+      $("btnRelaxed").addEventListener("click", applyRelaxed);
+      $("btnSummary").addEventListener("click", applySummary);
+      $("btnFast").addEventListener("click", applyFast);
+      $("btnReset").addEventListener("click", () => {
+        article.innerHTML = origHTML;
+      });
+      $("color").addEventListener("change", applyRelaxed);
+      $("intensity").addEventListener("change", applyRelaxed);
+      $("direction").addEventListener("change", applyRelaxed);
+      $("style").addEventListener("change", applyRelaxed);
+
+      applyRelaxed();
+    </script>
+  </body>
+</html>

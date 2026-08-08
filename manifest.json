@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "Quick Read",
+  "description": "Skim long articles faster: LLM-generated summary, key-phrase highlights, or a 1-minute digest.",
+  "version": "0.1.0",
+  "permissions": ["contextMenus", "storage"],
+  "host_permissions": ["https://api.deepseek.com/*"],
+  "background": {
+    "scripts": ["config.js", "background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "lib/readability.js",
+        "content/extract.js",
+        "content/mark.js",
+        "content/render.js",
+        "content/main.js"
+      ],
+      "css": ["content/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": false
+  }
+}

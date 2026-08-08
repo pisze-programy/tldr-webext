@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Quick Read — Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <h1>Quick Read</h1>
+    <p class="hint">
+      Your API key is stored in this browser's extension storage and is only read by the background script.
+    </p>
+    <label for="apiKey">DeepSeek API key</label>
+    <input id="apiKey" type="password" autocomplete="off" spellcheck="false" />
+    <button id="save" type="button">Save</button>
+    <p id="status" class="status"></p>
+    <script src="options.js"></script>
+  </body>
+</html>

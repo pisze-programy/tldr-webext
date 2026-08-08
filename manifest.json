@@ -12,6 +12,7 @@
     {
       "matches": ["<all_urls>"],
       "js": [
+        "config.js",
         "lib/readability.js",
         "content/extract.js",
         "content/mark.js",

@@ -70,7 +70,43 @@ function targetWords(count) {
   return clamp(Math.round(count * CONFIG.FAST_WORD_RATIO), CONFIG.FAST_WORD_MIN, CONFIG.FAST_WORD_MAX);
 }
 
-async function buildUserPrompt(mode, article) {
+function smartTruncate(text, maxChars) {
+  if (text.length <= maxChars) return text;
+  const candidate = text.slice(0, maxChars);
+  const lastSent = Math.max(
+    candidate.lastIndexOf(". "),
+    candidate.lastIndexOf("! "),
+    candidate.lastIndexOf("? ")
+  );
+  const cutAt = lastSent > maxChars * 0.75 ? lastSent + 1 : maxChars;
+  return text.slice(0, cutAt).trimEnd();
+}
+
+function findParagraphBreak(text, near) {
+  for (const sep of ["\n\n", "\n", ". ", "! ", "? "]) {
+    const before = text.lastIndexOf(sep, near);
+    const after = text.indexOf(sep, near);
+    if (before === -1 && after === -1) continue;
+    if (before === -1) return after + sep.length;
+    if (after === -1) return before + sep.length;
+    return (near - before) < (after - near) ? before + sep.length : after + sep.length;
+  }
+  return near;
+}
+
+function mergeUsage(a, b) {
+  const pick = (u, f) => (u && u[f]) || 0;
+  const reasoning = (u) => (u && u.completion_tokens_details && u.completion_tokens_details.reasoning_tokens) || 0;
+  return {
+    prompt_tokens: pick(a, "prompt_tokens") + pick(b, "prompt_tokens"),
+    completion_tokens: pick(a, "completion_tokens") + pick(b, "completion_tokens"),
+    completion_tokens_details: {
+      reasoning_tokens: reasoning(a) + reasoning(b)
+    }
+  };
+}
+
+async function buildUserPrompt(mode, article, phraseLimitOverride) {
   const file = { summary: "summary.md", relaxed: "relaxed.md", fast: "fast.md" }[mode];
   let t = await loadPrompt(file);
   t = t
@@ -78,7 +114,10 @@ async function buildUserPrompt(mode, article) {
     .split("{{byline}}").join(article.byline || "")
     .split("{{published}}").join(article.published || "")
     .split("{{text}}").join(article.text || "");
-  if (mode === "relaxed") t = t.split("{{phrase_limit}}").join(String(phraseLimit(wordCount(article.text))));
+  if (mode === "relaxed") {
+    const limit = phraseLimitOverride || phraseLimit(wordCount(article.text));
+    t = t.split("{{phrase_limit}}").join(String(limit));
+  }
   if (mode === "fast") t = t.split("{{target_words}}").join(String(targetWords(wordCount(article.text))));
   return t;
 }
@@ -166,6 +205,45 @@ async function callApi(messages, mode, maxTokens) {
   return { ok: true, data, usage };
 }
 
+async function runCall(messages, mode) {
+  let out = await callApi(messages, mode, CONFIG.MAX_TOKENS[mode]);
+  if (!out.ok && out.error === "EMPTY") {
+    out = await callApi(messages, mode, CONFIG.MAX_TOKENS_RETRY);
+  }
+  return out;
+}
+
+async function callRelaxedChunk(system, article, chunkText, limit) {
+  const user = await buildUserPrompt("relaxed", { ...article, text: chunkText }, limit);
+  return runCall([{ role: "system", content: system }, { role: "user", content: user }], "relaxed");
+}
+
+async function callRelaxedChunked(article, system, baseLimit) {
+  const mid = findParagraphBreak(article.text, Math.floor(article.text.length / 2));
+  const chunkA = article.text.slice(0, mid);
+  const chunkB = article.text.slice(mid);
+  const limitA = Math.round(baseLimit * 0.55);
+  const limitB = Math.round(baseLimit * 0.45);
+
+  const [outA, outB] = await Promise.all([
+    callRelaxedChunk(system, article, chunkA, limitA),
+    callRelaxedChunk(system, article, chunkB, limitB)
+  ]);
+
+  if (!outA.ok || !outB.ok) {
+    const ok = outA.ok ? outA : outB;
+    const bad = outA.ok ? outB : outA;
+    console.error("[qr] relaxed chunk failed:", outA.ok ? "chunkB" : "chunkA", "error=", bad.error, bad.status || "");
+    return ok;
+  }
+
+  return {
+    ok: true,
+    data: { phrases: [...(outA.data.phrases || []), ...(outB.data.phrases || [])] },
+    usage: mergeUsage(outA.usage, outB.usage)
+  };
+}
+
 async function handleProcess(msg, sender) {
   try {
     const tabId = sender.tab ? sender.tab.id : -1;
@@ -176,20 +254,18 @@ async function handleProcess(msg, sender) {
       return { ok: true, data: entry.results[msg.mode].data, targetWords: entry.results[msg.mode].targetWords };
     }
 
-    const text = (msg.text || "").slice(0, CONFIG.MAX_CHARS);
+    const text = smartTruncate(msg.text || "", CONFIG.MAX_CHARS);
     const article = { title: msg.title, byline: msg.byline, published: msg.published, text };
-    const tPrompt = Date.now();
     const system = await loadPrompt("system.md");
-    const user = await buildUserPrompt(msg.mode, article);
-    const messages = [{ role: "system", content: system }, { role: "user", content: user }];
-    console.log("[qr] prompt +" + (Date.now() - tPrompt) + "ms");
-    if (CONFIG.DEBUG) console.log("[qr] prompt system=" + system.length + " user=" + user.length);
 
-    const tw = msg.mode === "fast" ? targetWords(wordCount(text)) : 0;
     const tApi = Date.now();
-    let out = await callApi(messages, msg.mode, CONFIG.MAX_TOKENS[msg.mode]);
-    if (!out.ok && out.error === "EMPTY") {
-      out = await callApi(messages, msg.mode, CONFIG.MAX_TOKENS_RETRY);
+    let out;
+    if (msg.mode === "relaxed" && text.length > CONFIG.CHUNK_THRESHOLD) {
+      out = await callRelaxedChunked(article, system, phraseLimit(wordCount(text)));
+    } else {
+      const user = await buildUserPrompt(msg.mode, article);
+      const messages = [{ role: "system", content: system }, { role: "user", content: user }];
+      out = await runCall(messages, msg.mode);
     }
     console.log(
       "[qr] api +" + (Date.now() - tApi) + "ms ok=" + out.ok +
@@ -197,6 +273,7 @@ async function handleProcess(msg, sender) {
       (out.status ? " status=" + out.status : "")
     );
 
+    const tw = msg.mode === "fast" ? targetWords(wordCount(text)) : 0;
     if (out.ok && out.usage) {
       QRUsage.record({
         ts: Date.now(),

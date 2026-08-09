@@ -66,17 +66,21 @@ const QRMark = (() => {
     return { text: chars.join(""), map };
   }
 
-  function match(map, target) {
-    let idx = map.text.indexOf(target);
+  function matchFromOffset(map, target, searchFrom) {
+    let idx = map.text.indexOf(target, searchFrom);
     let len = target.length;
+    if (idx === -1 && searchFrom > 0) {
+      idx = map.text.indexOf(target, 0);
+    }
     if (idx === -1) {
       const alt = stripLeadingArticle(target);
       if (alt && alt !== target) {
-        idx = map.text.indexOf(alt);
-        len = alt.length;
+        idx = map.text.indexOf(alt, searchFrom);
+        if (idx === -1) idx = map.text.indexOf(alt, 0);
+        if (idx !== -1) return { start: idx, end: idx + alt.length };
       }
+      return null;
     }
-    if (idx === -1) return null;
     return { start: idx, end: idx + len };
   }
 
@@ -94,7 +98,7 @@ const QRMark = (() => {
     const target = normalizeText(text);
     if (!target) return null;
     const map = buildMap(scope);
-    const m = match(map, target);
+    const m = matchFromOffset(map, target, 0);
     if (!m) return null;
     const arr = map.map;
     const s = arr[m.start];
@@ -114,17 +118,19 @@ const QRMark = (() => {
     let wrapWarned = false;
 
     const prepared = [];
+    let cursor = 0;
     for (const it of items || []) {
       const target = normalizeText(it.text || "");
       if (target.length < 2) {
         misses++;
         continue;
       }
-      const m = match(map, target);
+      const m = matchFromOffset(map, target, cursor);
       if (!m) {
         misses++;
         continue;
       }
+      cursor = m.end;
       prepared.push({ start: m.start, end: m.end, weight: Math.max(1, Math.min(6, it.weight | 0)) });
     }
     prepared.sort((a, b) => b.start - a.start);

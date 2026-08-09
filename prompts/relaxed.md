@@ -18,14 +18,16 @@ A KEY PHRASE is a contiguous fragment of 3-12 words carrying essential meaning: 
 - Do not extract the page title, the publication date, the byline, or image captions.
 - If the text contains non-article content (ads, related-article blurbs), ignore it.
 
-weight = 1..6, where:
-6 = the single most important claim / core result of the article (use sparingly)
-5 = major fact or argument
+weight = 1..6 scale:
+6 = single most important claim (max 2 total)
+5 = major fact or argument (max 5 total)
 4 = important context
 3 = supporting context
 2 = useful detail
-1 = minor detail (least important, use sparingly)
-Use the full 1-6 range.
+1 = minor detail (use sparingly)
+Distribute across the full range. Avoid clustering weights at 5-6.
+
+Return phrases ORDERED BY THEIR POSITION IN THE ARTICLE (the phrase that appears first in the article must appear first in the JSON array). This ordering is mandatory.
 
 Return {{phrase_limit}} phrases.
 

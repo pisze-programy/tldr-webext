@@ -7,6 +7,8 @@ ARTICLE TEXT:
 {{text}}
 </article>
 
+{{chunk_note}}
+
 Task: write a reader's summary shown ABOVE the untouched article. It must be easy to scan from top to bottom.
 
 Rules:

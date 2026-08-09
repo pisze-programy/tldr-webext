@@ -7,6 +7,8 @@ ARTICLE TEXT:
 {{text}}
 </article>
 
+{{chunk_note}}
+
 Task: compress the article into a digest readable in ~60 seconds.
 Target total length: {{target_words}} words. Stay close to it.
 

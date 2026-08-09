@@ -92,6 +92,39 @@ function findParagraphBreak(text, near) {
   return near;
 }
 
+function splitChunks(text, maxLen) {
+  const chunks = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + maxLen, text.length);
+    if (end < text.length) {
+      const at = findParagraphBreak(text, end);
+      if (at > start && at - start <= maxLen * 2) end = at;
+    }
+    chunks.push(text.slice(start, end));
+    start = end;
+  }
+  return chunks;
+}
+
+function distributeLimit(totalLimit, lengths, floor) {
+  if (!lengths.length) return [];
+  const total = lengths.reduce((a, b) => a + b, 0) || 1;
+  const baseFloor = Math.min(floor, Math.max(1, Math.round(totalLimit / lengths.length)));
+  const limits = lengths.map((len) => Math.max(baseFloor, Math.round((len / total) * totalLimit)));
+  let sum = limits.reduce((a, b) => a + b, 0);
+  let i = 0;
+  while (sum > totalLimit && i < lengths.length * 2) {
+    const idx = i % limits.length;
+    if (limits[idx] > baseFloor) {
+      limits[idx]--;
+      sum--;
+    }
+    i++;
+  }
+  return limits;
+}
+
 function mergeUsage(a, b) {
   const pick = (u, f) => (u && u[f]) || 0;
   const reasoning = (u) => (u && u.completion_tokens_details && u.completion_tokens_details.reasoning_tokens) || 0;
@@ -104,24 +137,43 @@ function mergeUsage(a, b) {
   };
 }
 
-async function buildUserPrompt(mode, article, phraseLimitOverride) {
+function chunkNote(index, total) {
+  return (
+    "NOTE: This is part " + (index + 1) + " of " + total +
+    " of a longer article. The excerpt below may begin or end in the middle of a sentence or paragraph. " +
+    "Process ONLY the text provided; never invent text that would precede or follow this excerpt."
+  );
+}
+
+async function buildUserPrompt(mode, article, opts) {
   const file = { summary: "summary.md", relaxed: "relaxed.md", fast: "fast.md" }[mode];
   let t = await loadPrompt(file);
+  const note = (opts && opts.chunkNote) || "";
   t = t
     .split("{{title}}").join(article.title || "")
     .split("{{byline}}").join(article.byline || "")
     .split("{{published}}").join(article.published || "")
     .split("{{text}}").join(article.text || "");
   if (mode === "relaxed") {
-    const limit = phraseLimitOverride || phraseLimit(wordCount(article.text));
+    const limit = (opts && opts.phraseLimit) || phraseLimit(wordCount(article.text));
     t = t.split("{{phrase_limit}}").join(String(limit));
   }
-  if (mode === "fast") t = t.split("{{target_words}}").join(String(targetWords(wordCount(article.text))));
+  if (mode === "fast") {
+    const tw = (opts && opts.targetWords) || targetWords(wordCount(article.text));
+    t = t.split("{{target_words}}").join(String(tw));
+  }
+  t = t.split("{{chunk_note}}").join(note);
   return t;
 }
 
 async function doCall(body) {
-  const { apiKey } = await browser.storage.local.get("apiKey");
+  let apiKey = "";
+  try {
+    const data = await browser.storage.local.get("apiKey");
+    apiKey = data.apiKey || "";
+  } catch (e) {
+    console.error("[qr] storage read failed:", e);
+  }
   if (!apiKey) return { error: "NO_KEY" };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), CONFIG.API_TIMEOUT_MS);
@@ -160,6 +212,18 @@ async function doCall(body) {
   }
 }
 
+function tryExtractJson(s) {
+  const first = s.indexOf("{");
+  const last = s.lastIndexOf("}");
+  if (first === -1 || last === -1 || last <= first) return null;
+  const candidate = s.slice(first, last + 1);
+  try {
+    return JSON.parse(candidate);
+  } catch (e) {
+    return null;
+  }
+}
+
 async function callApi(messages, mode, maxTokens) {
   const body = {
     model: CONFIG.MODEL,
@@ -182,6 +246,11 @@ async function callApi(messages, mode, maxTokens) {
   const message = choice && choice.message;
   const usage = r.json.usage || null;
   const content = (message && message.content) || "";
+  const finish = choice && choice.finish_reason;
+  if (CONFIG.DEBUG) {
+    console.log("[qr] api resp finish=" + finish + " len=" + content.length + " usage=" + JSON.stringify(r.json.usage));
+  }
+
   const trimmed = content
     .trim()
     .replace(/^```json\s*/i, "")
@@ -189,57 +258,145 @@ async function callApi(messages, mode, maxTokens) {
     .trim();
 
   if (!trimmed) {
-    if (CONFIG.DEBUG) console.warn("[qr] empty content finish=" + (choice && choice.finish_reason));
-    return { ok: false, error: "EMPTY", reason: choice && choice.finish_reason, usage };
+    if (CONFIG.DEBUG) console.warn("[qr] empty content finish=" + finish);
+    return { ok: false, error: "EMPTY", reason: finish, usage };
   }
 
   let data;
   try {
     data = JSON.parse(trimmed);
   } catch (e) {
-    if (CONFIG.DEBUG) console.warn("[qr] non-JSON content:", trimmed.slice(0, 200));
-    return { ok: false, error: "PARSE", snippet: trimmed.slice(0, 200), usage };
+    const recovered = tryExtractJson(trimmed);
+    if (recovered) {
+      data = recovered;
+    } else {
+      if (CONFIG.DEBUG) console.warn("[qr] non-JSON content finish=" + finish + ":", trimmed.slice(0, 300));
+      return { ok: false, error: "PARSE", snippet: trimmed.slice(0, 300), usage, reason: finish };
+    }
   }
   return { ok: true, data, usage };
 }
 
 async function runCall(messages, mode) {
   let out = await callApi(messages, mode, CONFIG.MAX_TOKENS[mode]);
-  if (!out.ok && out.error === "EMPTY") {
+  if (!out.ok && (out.error === "EMPTY" || out.error === "PARSE")) {
+    console.log("[qr] retry " + out.error + " with max_tokens=" + CONFIG.MAX_TOKENS_RETRY + " finish=" + out.reason);
     out = await callApi(messages, mode, CONFIG.MAX_TOKENS_RETRY);
   }
   return out;
 }
 
-async function callRelaxedChunk(system, article, chunkText, limit) {
-  const user = await buildUserPrompt("relaxed", { ...article, text: chunkText }, limit);
-  return runCall([{ role: "system", content: system }, { role: "user", content: user }], "relaxed");
+async function callChunk(mode, system, article, chunkText, opts) {
+  try {
+    const user = await buildUserPrompt(mode, { ...article, text: chunkText }, opts);
+    return await runCall([{ role: "system", content: system }, { role: "user", content: user }], mode);
+  } catch (e) {
+    console.error("[qr] chunk call failed:", e);
+    return { ok: false, error: "INTERNAL", detail: (e && e.message) || String(e) };
+  }
 }
 
-async function callRelaxedChunked(article, system, baseLimit) {
-  const mid = findParagraphBreak(article.text, Math.floor(article.text.length / 2));
-  const chunkA = article.text.slice(0, mid);
-  const chunkB = article.text.slice(mid);
-  const limitA = Math.round(baseLimit * 0.55);
-  const limitB = Math.round(baseLimit * 0.45);
+function mergeRelaxed(outs) {
+  const phrases = [];
+  let usage = null;
+  for (const o of outs) {
+    phrases.push(...(o.data.phrases || []));
+    usage = mergeUsage(usage, o.usage);
+  }
+  return { data: { phrases }, usage };
+}
 
-  const [outA, outB] = await Promise.all([
-    callRelaxedChunk(system, article, chunkA, limitA),
-    callRelaxedChunk(system, article, chunkB, limitB)
-  ]);
+function mergeSummary(outs) {
+  const keywords = [];
+  const seen = new Set();
+  const sections = [];
+  let tldr = "";
+  let usage = null;
+  for (const o of outs) {
+    if (o.data.tldr && !tldr) tldr = o.data.tldr;
+    for (const k of o.data.keywords || []) {
+      const key = String(k).toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        keywords.push(k);
+      }
+    }
+    sections.push(...(o.data.sections || []));
+    usage = mergeUsage(usage, o.usage);
+  }
+  return {
+    data: { tldr, keywords: keywords.slice(0, 8), sections: sections.slice(0, 8) },
+    usage
+  };
+}
 
-  if (!outA.ok || !outB.ok) {
-    const ok = outA.ok ? outA : outB;
-    const bad = outA.ok ? outB : outA;
-    console.error("[qr] relaxed chunk failed:", outA.ok ? "chunkB" : "chunkA", "error=", bad.error, bad.status || "");
-    return ok;
+function mergeFast(outs) {
+  const sections = [];
+  let tldr = "";
+  let usage = null;
+  for (const o of outs) {
+    if (o.data.tldr && !tldr) tldr = o.data.tldr;
+    sections.push(...(o.data.sections || []));
+    usage = mergeUsage(usage, o.usage);
+  }
+  return { data: { tldr, sections: sections.slice(0, 10) }, usage };
+}
+
+function mergeByMode(mode, outs) {
+  if (mode === "relaxed") return mergeRelaxed(outs);
+  if (mode === "fast") return mergeFast(outs);
+  return mergeSummary(outs);
+}
+
+async function processChunked(mode, article, system) {
+  const text = article.text;
+  const words = wordCount(text);
+  const chunkSize = Math.max(CONFIG.CHUNK_SIZE, Math.ceil(text.length / CONFIG.MAX_CHUNKS));
+  const chunks = splitChunks(text, chunkSize);
+  const lengths = chunks.map((c) => c.length);
+
+  let phraseLimits = null;
+  let wordLimits = null;
+  if (mode === "relaxed") phraseLimits = distributeLimit(phraseLimit(words), lengths, CONFIG.CHUNK_MIN_PHRASES);
+  if (mode === "fast") wordLimits = distributeLimit(targetWords(words), lengths, CONFIG.CHUNK_MIN_WORDS);
+
+  console.log(
+    "[qr] chunked mode=" + mode + " chunks=" + chunks.length +
+    " totalChars=" + text.length + " sizes=" + JSON.stringify(lengths)
+  );
+
+  const outs = await Promise.all(
+    chunks.map((chunk, i) =>
+      callChunk(mode, system, article, chunk, {
+        phraseLimit: phraseLimits && phraseLimits[i],
+        targetWords: wordLimits && wordLimits[i],
+        chunkNote: chunkNote(i, chunks.length)
+      })
+    )
+  );
+
+  const ok = outs.filter((o) => o.ok);
+  const bad = outs.filter((o) => !o.ok);
+
+  if (bad.length === 0) {
+    const merged = mergeByMode(mode, outs);
+    return { ok: true, data: merged.data, usage: merged.usage };
   }
 
-  return {
-    ok: true,
-    data: { phrases: [...(outA.data.phrases || []), ...(outB.data.phrases || [])] },
-    usage: mergeUsage(outA.usage, outB.usage)
-  };
+  console.error(
+    "[qr] chunked partial failure mode=" + mode + " failed=" + bad.length + "/" + outs.length +
+    " errors=" + bad.map((b) => b.error + (b.status ? " " + b.status : "")).join(", ")
+  );
+
+  if (ok.length === 0) {
+    const first = bad[0];
+    return { ok: false, error: first.error, status: first.status, detail: first.detail, reason: first.reason, snippet: first.snippet };
+  }
+
+  const merged = mergeByMode(mode, ok);
+  merged.partial = true;
+  merged.partialInfo = "Processed " + ok.length + "/" + chunks.length + " of the article.";
+  return merged;
 }
 
 async function handleProcess(msg, sender) {
@@ -252,26 +409,32 @@ async function handleProcess(msg, sender) {
       return { ok: true, data: entry.results[msg.mode].data, targetWords: entry.results[msg.mode].targetWords };
     }
 
-    const text = smartTruncate(msg.text || "", CONFIG.MAX_CHARS);
+    const text = (msg.text || "").trim();
+    const words = wordCount(text);
     const article = { title: msg.title, byline: msg.byline, published: msg.published, text };
     const system = await loadPrompt("system.md");
 
     const tApi = Date.now();
     let out;
-    if (msg.mode === "relaxed" && text.length > CONFIG.CHUNK_THRESHOLD) {
-      out = await callRelaxedChunked(article, system, phraseLimit(wordCount(text)));
+    const shouldChunk = text.length > CONFIG.CHUNK_THRESHOLD;
+    console.log("[qr] route mode=" + msg.mode + " chars=" + text.length + " chunk=" + shouldChunk);
+    if (shouldChunk && (msg.mode === "relaxed" || msg.mode === "summary" || msg.mode === "fast")) {
+      out = await processChunked(msg.mode, article, system);
     } else {
-      const user = await buildUserPrompt(msg.mode, article);
+      const safe = smartTruncate(text, CONFIG.MAX_CHARS);
+      const singleArticle = { ...article, text: safe };
+      const user = await buildUserPrompt(msg.mode, singleArticle);
       const messages = [{ role: "system", content: system }, { role: "user", content: user }];
       out = await runCall(messages, msg.mode);
     }
     console.log(
       "[qr] api +" + (Date.now() - tApi) + "ms ok=" + out.ok +
       " error=" + (out.error || "") +
-      (out.status ? " status=" + out.status : "")
+      (out.status ? " status=" + out.status : "") +
+      (out.partial ? " partial=" + out.partialInfo : "")
     );
 
-    const tw = msg.mode === "fast" ? targetWords(wordCount(text)) : 0;
+    const tw = msg.mode === "fast" ? targetWords(words) : 0;
     if (out.ok && out.usage) {
       QRUsage.record({
         ts: Date.now(),
@@ -283,13 +446,13 @@ async function handleProcess(msg, sender) {
         costUsd: QRUsage.costOf(out.usage)
       });
       entry.results[msg.mode] = { data: out.data, targetWords: tw };
-      return { ok: true, data: out.data, targetWords: tw };
+      return { ok: true, data: out.data, targetWords: tw, partial: out.partial, partialInfo: out.partialInfo };
     }
 
     if (!out.ok) console.error("Quick Read API error:", out.error, out.status || "", out.reason || out.snippet || "");
     return out;
   } catch (e) {
-    console.error("Quick Read internal error:", e);
+    console.error("Quick Read internal error:", e, (e && e.stack) || "");
     return { ok: false, error: "INTERNAL", detail: (e && e.message) || String(e) };
   }
 }

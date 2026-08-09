@@ -25,17 +25,24 @@
   }
 
   function errMessage(res) {
-    if (res.detail) return "Quick Read: " + res.detail;
-    switch (res.error) {
-      case "NO_KEY": return "Quick Read: set your API key in Add-ons → Settings.";
-      case "NO_RESPONSE": return "Quick Read: background not responding — reload the add-on and the page.";
-      case "NETWORK": return "Quick Read: network error.";
-      case "EMPTY": return "Quick Read: the model returned an empty response.";
-      case "PARSE": return "Quick Read: unexpected response from the model.";
-      case "TIMEOUT": return "Quick Read: request timed out.";
-      case "API": return "Quick Read: API error " + (res.status || "");
-      default: return "Quick Read: unexpected error.";
+    const code = res && res.error;
+    let msg;
+    if (res.detail) {
+      msg = "Quick Read: " + res.detail;
+    } else {
+      switch (res.error) {
+        case "NO_KEY": msg = "Quick Read: set your API key in Add-ons → Settings."; break;
+        case "NO_RESPONSE": msg = "Quick Read: background not responding — reload the add-on and the page."; break;
+        case "NETWORK": msg = "Quick Read: network error."; break;
+        case "EMPTY": msg = "Quick Read: the model returned an empty response."; break;
+        case "PARSE": msg = "Quick Read: unexpected response from the model."; break;
+        case "TIMEOUT": msg = "Quick Read: request timed out."; break;
+        case "API": msg = "Quick Read: API error " + (res.status || ""); break;
+        default: msg = "Quick Read: unexpected error.";
+      }
     }
+    if (code) msg = "[" + code + "] " + msg;
+    return msg;
   }
 
   function restore() {
@@ -158,6 +165,7 @@
       log("sendMessage +" + (Date.now() - t1) + "ms ok=" + !!(res && res.ok === true));
 
       if (!res || res.ok !== true) {
+        console.error("[qr] process failed mode=" + mode + ":", res);
         loading(false);
         toast(errMessage(res || { error: "NO_RESPONSE" }), true);
         return;
@@ -173,6 +181,9 @@
       };
       apply(mode, res.data, article, res.targetWords, markOpts);
       log("apply +" + (Date.now() - t2) + "ms mode=" + mode);
+      if (res.partial) {
+        toast("Quick Read: " + (res.partialInfo || "article partially processed."));
+      }
     } catch (e) {
       console.error("[qr] fail mode=" + mode + " phase=" + phase + ":", e);
       loading(false);

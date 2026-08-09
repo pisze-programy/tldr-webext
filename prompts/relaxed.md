@@ -5,10 +5,13 @@ ARTICLE TEXT:
 {{text}}
 </article>
 
+{{chunk_note}}
+
 Task: extract the KEY PHRASES a skimming reader must not miss, so that a reader who scans ONLY the highlighted fragments understands the whole story.
 
 A KEY PHRASE is a contiguous fragment of 3-12 words carrying essential meaning: claims, numbers, dates, names, comparisons, causality, conclusions.
 - Copy each phrase VERBATIM, exactly as it appears in the text (same words, same spelling, same order). You may drop a leading "The"/"A".
+- When a copied phrase contains double-quote characters, escape them in the JSON string as \" so the output stays valid JSON.
 - Prefer longer, specific fragments so the phrase is uniquely findable in the text.
 - NEVER paraphrase, summarize, or combine phrases.
 - Strictly 3-12 words, never longer.

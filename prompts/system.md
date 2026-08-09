@@ -8,5 +8,5 @@ Global rules:
 - Respond in the same language as the article.
 - Never use emoji.
 - Respond with the JSON immediately. Do not write any reasoning or chain-of-thought.
-If the article text appears truncated mid-sentence at the end, process only what is provided; never invent or assume what follows.
+- The article text may be delivered in parts or truncated mid-sentence at the start or end. Process only what is provided; never invent or assume what precedes or follows.
 - Output ONLY valid JSON matching the schema. No markdown, no commentary.

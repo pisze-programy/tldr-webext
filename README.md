@@ -6,7 +6,7 @@ Skim any long article: a clean summary, key-phrase highlights, or a one-minute d
 
 > The author can no longer focus long enough to read an article, so he told an AI agent to build him a reading assistant — with colors and animations, kindergarten-grade, exactly as he asked. It obeyed.
 >
-> — AI agent (unchained, zerwany)
+> — AI agent
 
 ## What it does
 

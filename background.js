@@ -2,33 +2,31 @@ const ROOT_ID = "qr-root";
 const promptCache = new Map();
 const cache = new Map();
 
-let menusReady = false;
-let menusPromise = null;
+const MENU_DEFS = [
+  { id: ROOT_ID, title: "Quick Read", contexts: ["page", "selection"] },
+  { id: "qr-summary", parentId: ROOT_ID, title: "Summary (TL;DR)", contexts: ["page", "selection"] },
+  { id: "qr-relaxed", parentId: ROOT_ID, title: "Relaxed (key phrases)", contexts: ["page", "selection"] },
+  { id: "qr-fast", parentId: ROOT_ID, title: "Fast (1-minute digest)", contexts: ["page", "selection"] },
+  { id: "qr-settings", parentId: ROOT_ID, title: "Settings…", contexts: ["page", "selection"] }
+];
 
-function createMenus() {
-  if (menusReady) return;
-  if (!menusPromise) {
-    menusPromise = browser.contextMenus
-      .removeAll()
-      .then(() => {
-        browser.contextMenus.create({ id: ROOT_ID, title: "Quick Read", contexts: ["page", "selection"] });
-        browser.contextMenus.create({ id: "qr-summary", parentId: ROOT_ID, title: "Summary (TL;DR)", contexts: ["page", "selection"] });
-        browser.contextMenus.create({ id: "qr-relaxed", parentId: ROOT_ID, title: "Relaxed (key phrases)", contexts: ["page", "selection"] });
-        browser.contextMenus.create({ id: "qr-fast", parentId: ROOT_ID, title: "Fast (1-minute digest)", contexts: ["page", "selection"] });
-        browser.contextMenus.create({ id: "qr-settings", parentId: ROOT_ID, title: "Settings…", contexts: ["page", "selection"] });
-      })
-      .then(() => {
-        menusReady = true;
-      })
-      .catch((e) => {
-        console.error("[qr] context menu error:", e);
-      });
-  }
+let menusPromise = Promise.resolve();
+
+function ensureMenus() {
+  menusPromise = menusPromise
+    .then(async () => {
+      await browser.contextMenus.removeAll();
+      for (const def of MENU_DEFS) {
+        await browser.contextMenus.create(def);
+      }
+    })
+    .catch((e) => console.error("[qr] context menu error:", e));
   return menusPromise;
 }
 
-browser.runtime.onInstalled.addListener(createMenus);
-browser.runtime.onStartup.addListener(createMenus);
+browser.runtime.onInstalled.addListener(ensureMenus);
+browser.runtime.onStartup.addListener(ensureMenus);
+ensureMenus();
 
 browser.tabs.onRemoved.addListener((id) => cache.delete(id));
 browser.tabs.onUpdated.addListener((id, info) => {

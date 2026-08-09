@@ -164,7 +164,13 @@
       }
       const t2 = Date.now();
       phase = "apply";
-      const markOpts = await browser.storage.local.get(["markStyle", "markColor", "markIntensity", "markDirection"]);
+      const s = await browser.storage.local.get(["markStyle", "markColor", "markIntensity", "markDirection"]);
+      const markOpts = {
+        style: s.markStyle,
+        color: s.markColor,
+        intensity: s.markIntensity,
+        direction: s.markDirection
+      };
       apply(mode, res.data, article, res.targetWords, markOpts);
       log("apply +" + (Date.now() - t2) + "ms mode=" + mode);
     } catch (e) {

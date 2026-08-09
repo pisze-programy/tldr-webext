@@ -141,6 +141,32 @@
         margin-bottom: 6px;
       }
 
+      .qr-summary .mega {
+        margin: 14px 0 6px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        padding: 12px 16px;
+        background: rgba(0, 0, 0, 0.015);
+      }
+
+      .qr-summary .mega p {
+        margin: 0 0 10px;
+        font-size: 15px;
+        line-height: 1.65;
+      }
+
+      .qr-summary .mega p:last-child {
+        margin-bottom: 0;
+      }
+
+      .qr-summary .mega .overview {
+        font-weight: 500;
+      }
+
+      .qr-summary .mega .why {
+        color: rgba(0, 0, 0, 0.75);
+      }
+
       .qr-fast {
         background: #fff;
         border: 1px solid rgba(0, 0, 0, 0.06);
@@ -258,6 +284,10 @@
           card.innerHTML =
             '<p class="tldr">The age of personalized software: an AI agent edits the source directly, so plugin systems and config files are no longer needed.</p>' +
             '<span class="kw">open source</span><span class="kw">agent</span><span class="kw">source code</span>' +
+            '<div class="mega">' +
+            '<p class="overview">The article explains how AI agents that can edit source code directly make plugin systems and config files obsolete, and shows the recipe: a few prompts to an agent, applied to open-source software.</p>' +
+            '<p class="why">Worth reading if you build or maintain software — it changes what "configuring" means and shows how a small team can assemble the exact features it wants.</p>' +
+            '</div>' +
             '<div class="sec"><h4>The recipe</h4><ul><li>Two prompts to an agent are enough to start.</li></ul></div>' +
             '<div class="sec"><h4>The limit</h4><ul><li>Closed-source agents cannot be personalized.</li></ul></div>';
           article.prepend(card);

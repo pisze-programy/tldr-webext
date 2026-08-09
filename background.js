@@ -311,9 +311,13 @@ function mergeSummary(outs) {
   const seen = new Set();
   const sections = [];
   let tldr = "";
+  let overview = "";
+  let whyRead = "";
   let usage = null;
   for (const o of outs) {
     if (o.data.tldr && !tldr) tldr = o.data.tldr;
+    if (o.data.overview && !overview) overview = o.data.overview;
+    if (o.data.why_read && !whyRead) whyRead = o.data.why_read;
     for (const k of o.data.keywords || []) {
       const key = String(k).toLowerCase();
       if (!seen.has(key)) {
@@ -325,7 +329,7 @@ function mergeSummary(outs) {
     usage = mergeUsage(usage, o.usage);
   }
   return {
-    data: { tldr, keywords: keywords.slice(0, 8), sections: sections.slice(0, 8) },
+    data: { tldr, keywords: keywords.slice(0, 8), overview, why_read: whyRead, sections: sections.slice(0, 8) },
     usage
   };
 }

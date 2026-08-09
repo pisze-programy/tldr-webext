@@ -14,6 +14,8 @@ const markSelects = {
   markDirection: document.getElementById("markDirection")
 };
 
+const fontFamilySelect = document.getElementById("fontFamily");
+
 const PALETTE_ORDER = ["orange", "yellow", "green", "blue", "purple", "gray"];
 const PALETTE_NAMES = {
   orange: "Orange",
@@ -111,12 +113,13 @@ document.addEventListener("keydown", (e) => {
 
 async function load() {
   try {
-    const data = await browser.storage.local.get(["apiKey", "markColor", "markIntensity", "markStyle", "markDirection"]);
+    const data = await browser.storage.local.get(["apiKey", "markColor", "markIntensity", "markStyle", "markDirection", "fontFamily"]);
     if (data.apiKey) input.value = data.apiKey;
     reflectCurrent(data.markColor || "orange", data.markIntensity || "normal");
     for (const key of Object.keys(markSelects)) {
       if (data[key]) markSelects[key].value = data[key];
     }
+    if (data.fontFamily) fontFamilySelect.value = data.fontFamily;
   } catch (e) {
     console.error("[qr] options load:", e);
     flash("Failed to load settings.");
@@ -143,6 +146,15 @@ for (const key of Object.keys(markSelects)) {
     }
   });
 }
+
+fontFamilySelect.addEventListener("change", async () => {
+  try {
+    await browser.storage.local.set({ fontFamily: fontFamilySelect.value });
+    flash("Saved.");
+  } catch (e) {
+    console.error("[qr] options fontFamily:", e);
+  }
+});
 
 async function renderUsage() {
   try {

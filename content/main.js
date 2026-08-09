@@ -56,6 +56,8 @@
     }
     state.extra.forEach((e) => e.remove());
     state.extra = [];
+    document.documentElement.classList.remove("qr-font-mono");
+    if (state.scope) state.scope.classList.remove("qr-font-scope");
     state.active = null;
   }
 
@@ -70,6 +72,11 @@
     } else {
       container.parentNode.insertBefore(el, container);
     }
+  }
+
+  function applyFont(fontFamily) {
+    document.documentElement.classList.toggle("qr-font-mono", fontFamily === "jetbrains");
+    if (state.scope) state.scope.classList.toggle("qr-font-scope", fontFamily === "jetbrains");
   }
 
   function apply(mode, data, article, targetWords, markOpts) {
@@ -172,7 +179,8 @@
       }
       const t2 = Date.now();
       phase = "apply";
-      const s = await browser.storage.local.get(["markStyle", "markColor", "markIntensity", "markDirection"]);
+      const s = await browser.storage.local.get(["markStyle", "markColor", "markIntensity", "markDirection", "fontFamily"]);
+      applyFont(s.fontFamily);
       const markOpts = {
         style: s.markStyle,
         color: s.markColor,

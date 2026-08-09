@@ -35,9 +35,25 @@ const QRRender = (() => {
       kw.append(s);
     }
 
+    const mega = document.createElement("div");
+    mega.className = "qr-summary-mega";
+    if (data.overview) {
+      const ov = document.createElement("p");
+      ov.className = "qr-summary-mega-overview";
+      ov.textContent = data.overview;
+      mega.append(ov);
+    }
+    if (data.why_read) {
+      const why = document.createElement("p");
+      why.className = "qr-summary-mega-why";
+      why.textContent = data.why_read;
+      mega.append(why);
+    }
+
+    const sections = data.sections || [];
     const secs = document.createElement("div");
     secs.className = "qr-summary-sections";
-    for (const s of data.sections || []) {
+    for (const s of sections) {
       const sec = document.createElement("section");
       sec.className = "qr-sec";
       const h = document.createElement("h4");
@@ -63,7 +79,7 @@ const QRRender = (() => {
       secs.append(sec);
     }
 
-    el.append(head, tldr, kw, secs);
+    el.append(head, tldr, kw, mega, secs);
     return el;
   }
 

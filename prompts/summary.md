@@ -14,6 +14,8 @@ Task: write a reader's summary shown ABOVE the untouched article. It must be eas
 Rules:
 - "tldr": one sentence, max 25 words — what the article is about + the single most important takeaway.
 - "keywords": up to 8 distinct technical terms, names, or numbers taken verbatim from the article.
+- "overview": one short human paragraph, max ~60 words, written in plain prose — what the article is about and the main thread it follows.
+- "why_read": one short human paragraph, max ~50 words — why the reader should care and what they gain from reading it.
 - "sections": 2-4 sections. Each has a short "heading" (max 5 words) and 2-4 "points".
 - Each point has:
   - "text": max ~18 words; includes the key technical terms.
@@ -25,4 +27,4 @@ Rules:
 - If the text contains non-article content (ads, related-article blurbs, newsletter pitches), ignore it.
 
 JSON schema:
-{"tldr": string, "keywords": [string], "sections": [{"heading": string, "points": [{"text": string, "anchor": string}]}]}
+{"tldr": string, "keywords": [string], "overview": string, "why_read": string, "sections": [{"heading": string, "points": [{"text": string, "anchor": string}]}]}

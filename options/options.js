@@ -147,9 +147,10 @@ for (const key of Object.keys(markSelects)) {
 async function renderUsage() {
   try {
     const data = await browser.storage.local.get(["usageLog", "usageTotals"]);
-    const usageTotals = data.usageTotals || { calls: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 };
+    const usageTotals = data.usageTotals || { calls: 0, cached: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 };
     totalsEl.textContent =
       "Calls: " + usageTotals.calls +
+      " · Cached: " + (usageTotals.cached || 0) +
       " · Input: " + usageTotals.promptTokens +
       " · Output: " + usageTotals.completionTokens +
       " · Cost: " + money(usageTotals.costUsd);

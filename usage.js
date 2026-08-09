@@ -13,7 +13,7 @@ const QRUsage = {
   async record(entry) {
     const data = await this.get();
     const usageLog = data.usageLog || [];
-    const usageTotals = data.usageTotals || { calls: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 };
+    const usageTotals = data.usageTotals || { calls: 0, cached: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 };
     usageLog.push(entry);
     usageTotals.calls += 1;
     usageTotals.promptTokens += entry.promptTokens;
@@ -23,6 +23,13 @@ const QRUsage = {
       usageLog: usageLog.slice(-CONFIG.USAGE_LOG_CAP),
       usageTotals
     });
+  },
+
+  async recordHit() {
+    const data = await this.get();
+    const usageTotals = data.usageTotals || { calls: 0, cached: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 };
+    usageTotals.cached = (usageTotals.cached || 0) + 1;
+    await browser.storage.local.set({ usageTotals });
   },
 
   async attachMetrics(host, mode, metrics) {
@@ -40,7 +47,7 @@ const QRUsage = {
   async clear() {
     await browser.storage.local.set({
       usageLog: [],
-      usageTotals: { calls: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 }
+      usageTotals: { calls: 0, cached: 0, promptTokens: 0, completionTokens: 0, costUsd: 0 }
     });
   }
 };

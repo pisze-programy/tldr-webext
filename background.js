@@ -172,6 +172,7 @@ async function handleProcess(msg, sender) {
     const entry = cache.get(tabId) || cache.set(tabId, { results: {} }).get(tabId);
     if (entry.results[msg.mode]) {
       console.log("[qr] cache hit mode=" + msg.mode);
+      QRUsage.recordHit();
       return { ok: true, data: entry.results[msg.mode].data, targetWords: entry.results[msg.mode].targetWords };
     }
 
